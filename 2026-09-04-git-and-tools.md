@@ -35,7 +35,6 @@ git switch exp                # 切换到 exp 分支（新写法，推荐）
 git switch -c exp             # 创建 + 切换一步到位
 git switch main               # 切回主线
 git branch -d exp             # 删除已合并的分支
-
 ```
 5. 克隆完项目，用vscode打开相应文件夹，创建新一个新文件，写笔记；
 6. 提交三连：在 VSCode 里按 Ctrl + ` 打开内置终端（当前目录就是仓库），依次执行：
