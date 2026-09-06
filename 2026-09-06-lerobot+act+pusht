@@ -1,0 +1,136 @@
+# 实验记录 2026-09-06
+## 今日内容
+1. colab完成lerobot的仿真线路走通；
+2. 在算力平台再实现一遍；
+   
+## 学习到的知识
+1. ACT（Action Chunking with Transformers，动作分块 Transformer）是斯坦福为 ALOHA 双臂机器人设计的算法，核心有两个聪明的设计：
+1）动作分块（Action Chunking）——治“一步错步步错”：
+普通做法是模型每走一步看一眼、动一下，一旦某步有微小偏差，之后的画面就和训练时见过的越来越不像，错误滚雪球（学名叫“复合误差”）。ACT 的解法：一次预测未来一整段动作（默认 100 步），执行其中一部分后再重新观察、重新规划。就像写字不是一笔一划地想，而是一整个笔画一气呵成——动作更连贯、更抗干扰。
+2）CVAE 隐变量 z——治“同一局面多种做法”：
+同一个画面下，人类玩家可能从左边推、也可能从右边推，都合理。普通模型会把两种做法“平均”成一种中间的、谁都不像的垃圾动作。ACT 用一个隐变量 z 当“风格旋钮”，训练时学会分辨“这段演示是什么风格”，从而不把不同的合理做法搅成一团浆糊。
+2. LeRobot：这是一种机器人框架，相当于是一种标准，统一硬件控制、数据格式、策略算法、训练/评估/模型发布
+3. 常用的linux操作：
+```bash
+cd /path/to/folder      # 进入某个目录
+ls                      # 列出当前目录文件
+mkdir mydata            # 新建文件夹
+pwd                     # 显示当前位置
+conda activate myenv    # 激活 Python 虚拟环境
+nvidia-smi              # 查看 GPU 占用情况（最常用！）
+pip install xxx         # 安装 Python 包
+nohup python train.py > train.log 2>&1 &   # 后台运行训练，关掉 SSH 也不中断
+tail -f train.log                          # 实时查看训练日志
+```
+4. 关机容器，是停止计费，数据以及虚拟环境什么的只要在root文件夹下，10/15内就不会丢失。下次打开只需要重新更新remote-ssh的host config即可。
+
+## 实验记录
+1. 创建容器，再卡片右侧三个点下拉菜单的查看详情里面有ssh信息
+2. 在vscode里面：
+   Ctrl+Shift+P → 输入 Remote-SSH: Open SSH Configuration File → 选第一个（C:\Users\你的用户名\.ssh\config），填入：
+```bash
+Host paratera-gpu #这个名字不与老卡重复就行
+HostName ssh.zw1.paratera.com
+Port 2222
+User root@ackcs-00gjhm5t
+```
+3. 左下角小绿块 >< 图标 → 连接到主机 → 选 paratera-gpu；新窗口弹出 → 选 Linux；提示输入密码 → 粘贴你复制的密码
+4. git clone 项目
+5. 初始化conda
+```bash
+#初始化 conda（写入 bashrc）
+conda init bash
+#让配置生效
+source ~/.bashrc
+```
+6. 看到 (base) 就说明 conda 正常，然后创建并激活虚拟环境
+```bash
+#创建并激活 lerobot 环境
+conda create -n lerobot python=3.12 -y
+conda activate lerobot
+```
+7. 激活成功后提示符变成 (lerobot) root@...，就可以装 lerobot 了
+```bash
+cd /root/lerobot
+pip install -e ".[core_scripts,training]" -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install -e ".[pusht]" -i https://pypi.tuna.tsinghua.edu.cn/simple
+conda install ffmpeg -c conda-forge -y
+```
+8. 配置wandb账号
+```bash
+pip install wandb -i https://pypi.tuna.tsinghua.edu.cn/simple
+wandb login  #提示粘贴 API key 时，粘贴后回车，看到 "wandb: Appending key..." 即成功
+```
+9.  配置hugging face账号
+```bash
+pip install -U huggingface_hub -i https://pypi.tuna.tsinghua.edu.cn/simple
+export HF_ENDPOINT=https://hf-mirror.com
+hf auth login  #记得按向下键，选择密码进入，粘贴 Token 回车
+echo 'export HF_ENDPOINT=https://hf-mirror.com' >> ~/.bashrc #写进 bashrc，以后每次开终端自动生效
+```
+
+## 遇到的问题&解决方法
+1. 容器里面没有梯子，git clone困难怎么办。
+   
+   解决:
+   原先的命令：
+```bash
+git clone https://github.com/huggingface/lerobot.git
+```
+   新命令（clone 加速前缀）：
+```bash
+git clone https://ghproxy.net/https://github.com/huggingface/lerobot.git
+ ```
+2. 用上面的新命令还是会报错 RPC failed; curl 92 HTTP/2 stream was not closed cleanly 这是是克隆大仓库时网络中断导致的。
+   
+   解决：
+```bash
+rm -rf lerobot #删除安装了一半的
+git clone --depth 1 https://github.com/huggingface/lerobot.git #换一个加速源，直接试不带代理的官方源；--depth 1 对你完全没影响——你只是用代码，不需要提交历史。
+```
+3. root@p-fadf42a8c8a8-ackcs-00gjhm5t:~/lerobot# pip install -e ".[core_scripts,training]" -i https://pypi.tuna.tsinghua.edu.cn/simple
+error: externally-managed-environment
+
+× This environment is externally managed
+╰─> To install Python packages system-wide, try apt install
+    python3-xyz, where xyz is the package you are trying to
+    install.
+    
+    If you wish to install a non-Debian-packaged Python package,
+    create a virtual environment using python3 -m venv path/to/venv.
+    Then use path/to/venv/bin/python and path/to/venv/bin/pip. Make
+    sure you have python3-full installed.
+    
+    If you wish to install a non-Debian packaged Python application,
+    it may be easiest to use pipx install xyz, which will manage a
+    virtual environment for you. Make sure you have pipx installed.
+    
+    See /usr/share/doc/python3.12/README.venv for more information.
+
+note: If you believe this is a mistake, please contact your Python installation or OS distribution provider. You can override this, at the risk of breaking your Python installation or OS, by passing --break-system-packages.
+hint: See PEP 668 for the detailed specification.
+
+解决：
+你的容器用的是 Debian 12 系统自带的 Python 3.12，它受 PEP 668 保护——不允许直接往系统 Python 里 pip 装包，怕弄坏系统。这不是坏事，只是要求你用一个独立的虚拟环境来装。用conda创建环境
+```bash
+conda create -n lerobot python=3.12 -y
+conda activate lerobot
+cd /root/lerobot
+pip install -e ".[core_scripts,training]" -i https://pypi.tuna.tsinghua.edu.cn/simple
+#虚拟环境不是永久的，新开一个终端要重新激活才能用 lerobot：
+```
+4. root@p-fadf42a8c8a8-ackcs-00gjhm5t:~/lerobot# conda activate lerobot                                                       
+                                                                                                                           
+CondaError: Run 'conda init' before 'conda activate'   
+
+解决：
+conda 装了但还没初始化你的 bash。
+```bash
+# 1. 初始化 conda（写入 bashrc）
+conda init bash
+# 2. 让配置生效
+source ~/.bashrc
+#生效后你会发现命令行最前面多了个 (base),然后就可以重新操作创建和激活了
+```
+
+   
