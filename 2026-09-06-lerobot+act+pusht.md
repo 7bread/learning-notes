@@ -109,7 +109,7 @@ error: externally-managed-environment
 
 note: If you believe this is a mistake, please contact your Python installation or OS distribution provider. You can override this, at the risk of breaking your Python installation or OS, by passing --break-system-packages.
 hint: See PEP 668 for the detailed specification.
-
+![alt text](image.png)
 解决：
 你的容器用的是 Debian 12 系统自带的 Python 3.12，它受 PEP 668 保护——不允许直接往系统 Python 里 pip 装包，怕弄坏系统。这不是坏事，只是要求你用一个独立的虚拟环境来装。用conda创建环境
 ```bash

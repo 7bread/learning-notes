@@ -4,7 +4,7 @@
 2. git基础；
 
 ## 学到的知识
-1. 快捷键打开vscode命令面板：win+shift+p；
+1. 快捷键打开vscode命令面板：ctrl+shift+p；
 2. 打开命令面板，选择打开用户设置，即可设置claude code的环境变量，设置成智谱；
 3. 如何在github上面创建仓库：点击create repository，输入名称和description，还可以设置可见；
 4. git相关操作：
