@@ -1,4 +1,4 @@
-# 实验记录 2026-09-07
+# 实验记录 2026-09-07/08
 ## 今日内容
 1. 在算力平台完成昨天act实验的剩余内容；
 2. 搞清楚act的基础原理
@@ -14,6 +14,17 @@ curl -fsSL 你的raw地址 | bash #raw地址，在gist.github.com里面，选择
 claude --version #注意安装完新开一个终端，进行验证
 ```
     安装完毕，打开命令面板（ctrl+shift+p），输入claude
+
+2. 论文ACT：
+一、ACT 的核心动机
+ACT 的应对方案是三个关键设计的组合：Action Chunking + Temporal Ensemble + CVAE 建模。ACT 要解决模仿学习（Imitation Learning）在精细操作中的两大难题：
+1) 复合误差：模仿学习中，先前动作的小误差会累积，导致机器人偏离训练数据分布，进入难以恢复的状态。
+2) 人类示教的非平稳性：人类示教本质上是有噪声的、多模态的——面对同样的观测，人类可能采取不同轨迹；且在精度要求不高的区域动作更随机（如中途停顿），单步马尔可夫策略很难建模。
+二、ACT 的核心动机
+1) Action Chunking（动作分块）
+受心理学中"动作分块"概念启发——人类会把一组动作打包成一个整体执行。
+策略不再每步预测单个动作，而是一次预测未来 k 步的目标关节位置序列：
+   
 
 
 
@@ -91,6 +102,47 @@ hf upload zyh1212zyh/act_pusht_20k \
   outputs/train/act_pusht_20k/checkpoints/020000/pretrained_model \
   --repo-type model
 ```
+
+## 评估结果
+1. 评估数据上传hf和wandb；
+2. checkpoint 20000仿真结果：
+   # Eval Report — act_pusht_20k @ checkpoint 020000
+
+- Eval dir: `outputs/eval/2026-09-08/19-17-29_act_pusht_20k_ckpt020000`
+- Episodes: **200** (seeds 1000–1199, batch 50, async envs, 300 steps max, seed-pinned)
+- Success rate: **0/200 = 0.0%**  (Wilson 95% CI: [0.0%, 1.9%])
+
+## Reward statistics
+
+| Metric | mean | median | p25 | p75 | max |
+|---|---|---|---|---|---|
+| max_reward (coverage) | 0.367 | 0.394 | 0.167 | 0.514 | 0.993 |
+| sum_reward | 34.0 | 23.4 | 5.0 | 55.4 | 146.5 |
+Failed episodes' max_reward: mean 0.367, best 0.993 (= closest-to-success failure)
+
+## Coverage histogram (max_reward bins)
+
+| max_reward bin | count | share |
+|---|---|---|
+| [0.00, 0.20) | 60 | 30% |
+| [0.20, 0.40) | 44 | 22% |
+| [0.40, 0.60) | 62 | 31% |
+| [0.60, 0.80) | 21 | 10% |
+| [0.80, 0.95) | 11 | 6% |
+| [0.95, 1.01) | 2 | 1% |
+
+## Representative videos
+
+| File | Episode | max_reward | sum_reward | success |
+|---|---|---|---|---|
+| `closest_failure_maxr0.99_ep144.mp4` | 144 | 0.993 | 128.4 | ❌ |
+| `closest_failure_maxr0.96_ep103.mp4` | 103 | 0.963 | 125.5 | ❌ |
+| `closest_failure_maxr0.95_ep019.mp4` | 19 | 0.949 | 98.9 | ❌ |
+| `typical_failure_maxr0.39_ep098.mp4` | 98 | 0.394 | 69.8 | ❌ |
+| `worst_failure_maxr0.00_ep020.mp4` | 20 | 0.000 | 0.0 | ❌ |
+| `worst_failure_maxr0.00_ep048.mp4` | 48 | 0.000 | 0.0 | ❌ |
+
+3. checkpoint 200000仿真结果：
 
 ## 遇到的问题与解决办法
 1. RuntimeError: Could not push packet to decoder: Function not implemented
