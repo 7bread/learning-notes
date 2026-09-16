@@ -24,3 +24,16 @@
    network结构：输入模态（3路）：球的轨迹序列（位置+速度）、机器人关节配置（6-DOF）、期望的落点位置(one-hot 控制信号：落点在哪个区域)---->MLP得到特征向量--->拼接--->transformer encoder--->输出：最优的关节角度调整
    训练目标：MSE，最小化预测值和真实关节调整之间的差异
    
+## 实验设计
+1. 硬件平台：ABB IRB-120+标准乒乓球拍； 计算平台：RTX4090
+2. 多频率链路：Fast-Slow系统60Hz ---> 逆运动学20KHz ----> IMPACT推理 2.4KHz ---> EMG（ ABB 官方提供的外部运动控制接口）下发 250Hz
+3. 实验验证：离线验证（训练集80% 验证集10% 测试集10%）、在线实体测试、OOD泛化（分布外场景，挪动发球机位置，从没见过的人类选手）
+4. baseline：ACT、Diffusion Policy
+5. 具体实验：
+   击中时刻的预测位置和球拍中心的偏差（system1 & RNN-based method & 本文双系统策略）；
+   动作推理时间（ACT & Diffusion policy & 本文策略）；
+   单球回球精度30cm & 20cm（人类 & ACT & Diffusion policy & 本文策略）；
+   连续100回合成功率ABCD四个区域30cm & 20cm（人类 & ACT & Diffusion policy & 本文策略）；
+   OOD实验：挪动发球机位置，30cm & 20cm成功率 （OOD，即不可见轨迹和先前的可见轨迹对比）；
+   在100个personA演示上微调模型，和A对打成功率和直接把微调模型和没见过的personB对打；
+   消融实验：
